@@ -1,0 +1,25 @@
+# Environment
+.env
+
+# Go
+backend/openmanage
+backend/backend
+
+# Node
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dev logs (optional, uncomment to exclude)
+# dev-logs/
