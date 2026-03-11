@@ -4,6 +4,10 @@
 # Go
 backend/openmanage
 backend/backend
+backend/openmanage-backend
+
+# Next.js build artifacts (misplaced)
+backend/.next/
 
 # Node
 frontend/node_modules/
@@ -20,6 +24,3 @@ frontend/out/
 # OS
 .DS_Store
 Thumbs.db
-
-# Dev logs (optional, uncomment to exclude)
-# dev-logs/
