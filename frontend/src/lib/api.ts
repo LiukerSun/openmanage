@@ -75,6 +75,62 @@ export interface UserPreferences {
   tools: string;
   extraContext: string;
   variables?: Record<string, string>;
+  discourseUrl?: string;
+  discourseApiKey?: string;
+  discourseCategory?: string;
+}
+
+export interface BatchCreateRequest {
+  prefix: string;
+  count: number;
+  startPort: number;
+  image?: string;
+  description?: string;
+}
+
+export interface ForumAction {
+  type: string;
+  title: string;
+  topicId: number;
+  postNumber: number;
+  createdAt: string;
+  excerpt: string;
+  slug: string;
+}
+
+export interface ForumActivity {
+  username: string;
+  topicCount: number;
+  postCount: number;
+  likesGiven: number;
+  likesReceived: number;
+  daysVisited: number;
+  actions: ForumAction[];
+}
+
+export interface BatchChatRequest {
+  containerIds: string[];
+  message: string;
+}
+
+export interface CronJob {
+  id: string;
+  name: string;
+  schedule: string;
+  prompt: string;
+  enabled: boolean;
+  lastRun?: string;
+  nextRun?: string;
+}
+
+export interface HeartbeatConfig {
+  every: string;
+  mode?: string;
+}
+
+export interface CronListResponse {
+  jobs: CronJob[];
+  heartbeat: HeartbeatConfig | null;
 }
 
 async function fetchAPI<T>(path: string, init?: RequestInit): Promise<T> {
@@ -204,5 +260,51 @@ export const api = {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(prefs),
+    }),
+
+  // Forum activity
+  getForumActivity: (id: string) =>
+    fetchAPI<ForumActivity>(`/api/containers/${id}/forum-activity`),
+
+  // Chat - returns SSE URL for streaming
+  chatURL: (id: string) => `${API_BASE}/api/containers/${id}/chat`,
+  batchChatURL: () => `${API_BASE}/api/batch/chat`,
+
+  // Cron & Heartbeat
+  listCronJobs: (id: string) =>
+    fetchAPI<CronListResponse>(`/api/containers/${id}/cron`),
+
+  addCronJob: (id: string, name: string, schedule: string, prompt: string) =>
+    fetchAPI<{ id: string }>(`/api/containers/${id}/cron`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, schedule, prompt }),
+    }),
+
+  toggleCronJob: (id: string, jobId: string, enabled: boolean) =>
+    fetchAPI(`/api/containers/${id}/cron/${jobId}/toggle`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled }),
+    }),
+
+  runCronJob: (id: string, jobId: string) =>
+    fetchAPI(`/api/containers/${id}/cron/${jobId}/run`, { method: "POST" }),
+
+  removeCronJob: (id: string, jobId: string) =>
+    fetchAPI(`/api/containers/${id}/cron/${jobId}`, { method: "DELETE" }),
+
+  updateHeartbeat: (id: string, every: string) =>
+    fetchAPI(`/api/containers/${id}/heartbeat`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ every }),
+    }),
+
+  generateCronJob: (id: string, description: string) =>
+    fetchAPI<{ schedule: string; prompt: string }>(`/api/containers/${id}/cron/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description }),
     }),
 };

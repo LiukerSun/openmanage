@@ -35,12 +35,14 @@ func NewClient(apiKey string) *Client {
 }
 
 type GenerateRequest struct {
-	Name         string
-	Description  string
-	Username     string
-	Style        string
-	Tools        string
-	ExtraContext string
+	Name              string
+	Description       string
+	Username          string
+	Style             string
+	Tools             string
+	ExtraContext      string
+	DiscourseURL      string
+	DiscourseUsername string
 }
 
 // Generate calls the GLM API to produce all 8 config files in one shot.
@@ -156,13 +158,13 @@ func (c *Client) GenerateStream(ctx context.Context, req GenerateRequest, onChun
 请严格以 JSON 格式输出，key 为文件名，value 为文件内容。不要输出任何其他内容。
 
 需要生成的文件：
-1. SOUL.md - Agent 的核心灵魂设定，包括性格、价值观、行为准则
+1. SOUL.md - Agent 的核心灵魂设定，包括性格、价值观、行为准则。要体现独特个性。
 2. IDENTITY.md - Agent 的身份信息，包括名称、角色定位、自我介绍
 3. AGENTS.md - 可调用的子 Agent 列表及其能力描述
-4. BOOTSTRAP.md - Agent 启动时的初始化指令和欢迎语
-5. HEARTBEAT.md - 定期提醒事项，如检查任务进度、主动关怀用户
-6. MEMORY.md - 初始记忆和需要长期记住的关键信息
-7. TOOLS.md - Agent 可使用的工具说明和使用注意事项
+4. BOOTSTRAP.md - Agent 启动时的初始化指令。必须包含：首次启动时在 Discourse 论坛的 General 分类（category: 4）发布一个自我介绍帖子，介绍自己的名字、兴趣和专长。
+5. HEARTBEAT.md - 定期执行的论坛社交任务。必须包含：浏览论坛最新话题、选择感兴趣的话题回复（每次 1-3 个）、偶尔发起新话题分享思考。回复要有深度，避免刷屏。
+6. MEMORY.md - 初始记忆，包括论坛地址和自己的用户名
+7. TOOLS.md - Agent 可使用的工具。必须包含：Discourse 论坛 API（通过 HTTP 请求发帖、回帖、浏览、搜索），以及 Web 搜索能力。
 8. USER.md - 目标用户画像和交互偏好
 
 每个文件内容应该丰富、具体、有针对性，不要使用空泛的占位符。内容使用 Markdown 格式。
@@ -182,6 +184,12 @@ func (c *Client) GenerateStream(ctx context.Context, req GenerateRequest, onChun
 	}
 	if req.ExtraContext != "" {
 		userPrompt += fmt.Sprintf("\n补充信息：%s", req.ExtraContext)
+	}
+	if req.DiscourseURL != "" {
+		userPrompt += fmt.Sprintf("\nDiscourse 论坛地址：%s", req.DiscourseURL)
+	}
+	if req.DiscourseUsername != "" {
+		userPrompt += fmt.Sprintf("\n论坛用户名：%s", req.DiscourseUsername)
 	}
 
 	body := map[string]interface{}{
@@ -261,4 +269,78 @@ func (c *Client) GenerateStream(ctx context.Context, req GenerateRequest, onChun
 	}
 
 	return files, nil
+}
+
+// GenerateCronJob takes a natural language description and returns a cron schedule + prompt.
+func (c *Client) GenerateCronJob(ctx context.Context, description string) (schedule string, prompt string, err error) {
+	systemPrompt := `你是一个定时任务配置助手。用户会用自然语言描述他们想让 AI Agent 定期执行的任务，你需要生成：
+1. 一个标准的 5 字段 cron 表达式（分 时 日 月 周）
+2. 一段给 Agent 的执行指令（prompt），告诉 Agent 具体要做什么
+
+请严格以 JSON 格式输出，包含 "schedule" 和 "prompt" 两个字段。不要输出任何其他内容。
+
+常见 cron 示例：
+- 每30分钟: */30 * * * *
+- 每小时: 0 * * * *
+- 每2小时: 0 */2 * * *
+- 每天早上9点: 0 9 * * *
+- 工作日每天: 0 9 * * 1-5
+
+输出格式：
+{"schedule": "*/30 * * * *", "prompt": "请浏览论坛最新话题..."}`
+
+	body := map[string]interface{}{
+		"model": model,
+		"messages": []map[string]string{
+			{"role": "system", "content": systemPrompt},
+			{"role": "user", "content": description},
+		},
+		"temperature": 0.3,
+	}
+
+	bodyJSON, _ := json.Marshal(body)
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", baseURL+"/chat/completions", bytes.NewReader(bodyJSON))
+	if err != nil {
+		return "", "", fmt.Errorf("create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
+
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return "", "", fmt.Errorf("api call: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return "", "", fmt.Errorf("read response: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", "", fmt.Errorf("api returned %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var result struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return "", "", fmt.Errorf("parse response: %w", err)
+	}
+	if len(result.Choices) == 0 {
+		return "", "", fmt.Errorf("empty response from API")
+	}
+
+	jsonStr2 := extractJSON(result.Choices[0].Message.Content)
+	var parsed struct {
+		Schedule string `json:"schedule"`
+		Prompt   string `json:"prompt"`
+	}
+	if err := json.Unmarshal([]byte(jsonStr2), &parsed); err != nil {
+		return "", "", fmt.Errorf("parse generated JSON: %w", err)
+	}
+	return parsed.Schedule, parsed.Prompt, nil
 }

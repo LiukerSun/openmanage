@@ -71,6 +71,9 @@
         }
       },
       "workspace": "{{WORKSPACE}}",
+      "heartbeat": {
+        "every": "30m"
+      },
       "compaction": {
         "mode": "safeguard"
       },
@@ -107,6 +110,11 @@
     "port": {{PORT}},
     "mode": "local",
     "bind": "loopback",
+    "http": {
+      "endpoints": {
+        "responses": { "enabled": true }
+      }
+    },
     "controlUi": {
       "dangerouslyAllowHostHeaderOriginFallback": false,
       "dangerouslyDisableDeviceAuth": false

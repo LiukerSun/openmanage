@@ -77,6 +77,43 @@ type ChangePasswordRequest struct {
 	NewPassword string `json:"newPassword"`
 }
 
+type BatchCreateRequest struct {
+	Prefix      string `json:"prefix"`
+	Count       int    `json:"count"`
+	StartPort   int    `json:"startPort"`
+	Image       string `json:"image"`
+	Description string `json:"description"`
+}
+
+type ForumActivity struct {
+	Username    string        `json:"username"`
+	TopicCount  int           `json:"topicCount"`
+	PostCount   int           `json:"postCount"`
+	LikesGiven  int           `json:"likesGiven"`
+	LikesRecv   int           `json:"likesReceived"`
+	DaysVisited int           `json:"daysVisited"`
+	Actions     []ForumAction `json:"actions"`
+}
+
+type ForumAction struct {
+	Type      string `json:"type"`
+	Title     string `json:"title"`
+	TopicID   int    `json:"topicId"`
+	PostNum   int    `json:"postNumber"`
+	CreatedAt string `json:"createdAt"`
+	Excerpt   string `json:"excerpt"`
+	Slug      string `json:"slug"`
+}
+
+type ChatRequest struct {
+	Message string `json:"message"`
+}
+
+type BatchChatRequest struct {
+	ContainerIDs []string `json:"containerIds"`
+	Message      string   `json:"message"`
+}
+
 type ContainerStats struct {
 	CPUPercent float64 `json:"cpuPercent"`
 	MemUsage   uint64  `json:"memUsage"`
@@ -85,4 +122,14 @@ type ContainerStats struct {
 	NetRx      uint64  `json:"netRx"`
 	NetTx      uint64  `json:"netTx"`
 	PIDs       uint64  `json:"pids"`
+}
+
+type CronJobRequest struct {
+	Name     string `json:"name"`
+	Schedule string `json:"schedule"`
+	Prompt   string `json:"prompt"`
+}
+
+type HeartbeatRequest struct {
+	Every string `json:"every"`
 }

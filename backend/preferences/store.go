@@ -14,6 +14,11 @@ type UserPreferences struct {
 	Tools        string            `json:"tools"`
 	ExtraContext string            `json:"extraContext"`
 	Variables    map[string]string `json:"variables,omitempty"`
+
+	// Discourse forum settings
+	DiscourseURL      string `json:"discourseUrl,omitempty"`
+	DiscourseAPIKey   string `json:"discourseApiKey,omitempty"`
+	DiscourseCategory string `json:"discourseCategory,omitempty"`
 }
 
 // Resolved returns a copy with {{VAR}} placeholders replaced by actual values.
@@ -54,12 +59,12 @@ type Store struct {
 	mu       sync.RWMutex
 }
 
-func NewStore() (*Store, error) {
+func NewStore(mountPrefix string) (*Store, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
 	}
-	dir := filepath.Join(homeDir, ".openmanage")
+	dir := filepath.Join(mountPrefix+homeDir, ".openmanage")
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return nil, err
 	}

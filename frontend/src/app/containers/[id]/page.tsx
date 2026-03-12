@@ -115,6 +115,8 @@ export default function ContainerDetail() {
         <Link href={`/containers/${id}/logs`} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded">日志</Link>
         <Link href={`/containers/${id}/files`} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded">文件</Link>
         <Link href={`/containers/${id}/conversations`} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded">对话</Link>
+        <Link href={`/containers/${id}/forum`} className="px-4 py-2 bg-indigo-700 hover:bg-indigo-600 rounded">论坛</Link>
+        <Link href={`/containers/${id}/cron`} className="px-4 py-2 bg-teal-700 hover:bg-teal-600 rounded">定时任务</Link>
         <button onClick={() => setShowDelete(true)} className="px-4 py-2 bg-red-900 hover:bg-red-800 rounded">删除容器</button>
       </div>
       <ConfirmDialog

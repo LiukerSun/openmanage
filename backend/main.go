@@ -12,9 +12,11 @@ import (
 	"github.com/go-chi/cors"
 
 	"openmanage/backend/ai"
+	"openmanage/backend/discourse"
 	"openmanage/backend/docker"
 	"openmanage/backend/handler"
 	"openmanage/backend/middleware"
+	"openmanage/backend/openclaw"
 	"openmanage/backend/preferences"
 )
 
@@ -44,20 +46,30 @@ func main() {
 
 	// AI client for generating agent configs
 	var aiClient *ai.Client
-	if apiKey := os.Getenv("GLM_API_KEY"); apiKey != "" {
-		aiClient = ai.NewClient(apiKey)
+	glmAPIKey := os.Getenv("GLM_API_KEY")
+	if glmAPIKey != "" {
+		aiClient = ai.NewClient(glmAPIKey)
 		log.Println("AI config generation enabled (GLM_API_KEY set)")
 	}
 
 	authH := handler.NewAuthHandler(jwtSecret)
-	prefsStore, err := preferences.NewStore()
+	prefsStore, err := preferences.NewStore(mountPrefix)
 	if err != nil {
 		log.Fatal("failed to create preferences store:", err)
 	}
-	containerH := &handler.ContainerHandler{Docker: dockerClient, TemplateDir: templateDir, MountPrefix: mountPrefix, AI: aiClient, Prefs: prefsStore}
+	containerH := &handler.ContainerHandler{Docker: dockerClient, TemplateDir: templateDir, MountPrefix: mountPrefix, AI: aiClient, GLMAPIKey: glmAPIKey, Prefs: prefsStore}
+
+	// Discourse client (lazy init from preferences)
+	if p, err := prefsStore.Get(); err == nil && p.DiscourseURL != "" && p.DiscourseAPIKey != "" {
+		containerH.Discourse = discourse.NewClient(p.DiscourseURL, p.DiscourseAPIKey)
+		log.Printf("Discourse integration enabled (%s)", p.DiscourseURL)
+	}
 	logsH := &handler.LogsHandler{Docker: dockerClient}
 	filesH := &handler.FilesHandler{Docker: dockerClient, MountPrefix: mountPrefix}
 	convH := &handler.ConversationsHandler{Docker: dockerClient, MountPrefix: mountPrefix}
+	openclawClient := &openclaw.Client{Docker: dockerClient, MountPrefix: mountPrefix}
+	chatH := &handler.ChatHandler{OpenClaw: openclawClient, Docker: dockerClient}
+	cronH := &handler.CronHandler{OpenClaw: openclawClient, Docker: dockerClient, AI: aiClient}
 
 	r := chi.NewRouter()
 	r.Use(chiMiddleware.Logger)
@@ -87,6 +99,8 @@ func main() {
 		r.Use(middleware.RequireAuth([]byte(jwtSecret)))
 
 		r.Post("/api/create-container", containerH.Create)
+		r.Post("/api/batch-create", containerH.BatchCreate)
+		r.Post("/api/batch/chat", chatH.BatchChat)
 		r.Post("/api/auth/change-password", authH.ChangePassword)
 		r.Put("/api/auth/password", authH.ChangePassword)
 		r.Get("/api/auth/me", authH.Me)
@@ -117,6 +131,15 @@ func main() {
 			r.Put("/{id}/files/*", filesH.Write)
 			r.Get("/{id}/conversations", convH.List)
 			r.Get("/{id}/conversations/{sid}", convH.Get)
+			r.Post("/{id}/chat", chatH.Chat)
+			r.Get("/{id}/forum-activity", containerH.ForumActivity)
+			r.Get("/{id}/cron", cronH.List)
+			r.Post("/{id}/cron", cronH.Add)
+			r.Post("/{id}/cron/{jobId}/toggle", cronH.Toggle)
+			r.Post("/{id}/cron/{jobId}/run", cronH.Run)
+			r.Delete("/{id}/cron/{jobId}", cronH.Remove)
+			r.Put("/{id}/heartbeat", cronH.UpdateHeartbeat)
+			r.Post("/{id}/cron/generate", cronH.Generate)
 		})
 	})
 

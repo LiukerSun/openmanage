@@ -1,9 +1,11 @@
 package docker
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -66,6 +68,21 @@ func (c *Client) ListOpenClawContainers(ctx context.Context) ([]types.Container,
 
 func (c *Client) InspectContainer(ctx context.Context, id string) (types.ContainerJSON, error) {
 	return c.cli.ContainerInspect(ctx, id)
+}
+
+// GetContainerEnv returns a map of environment variables set on the container.
+func (c *Client) GetContainerEnv(ctx context.Context, id string) (map[string]string, error) {
+	info, err := c.cli.ContainerInspect(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	env := make(map[string]string)
+	for _, e := range info.Config.Env {
+		if idx := strings.Index(e, "="); idx >= 0 {
+			env[e[:idx]] = e[idx+1:]
+		}
+	}
+	return env, nil
 }
 
 func (c *Client) StartContainer(ctx context.Context, id string) error {
@@ -159,6 +176,48 @@ func (c *Client) CreateContainer(ctx context.Context, name, image, dataPath stri
 	}
 
 	return resp.ID, nil
+}
+
+// ExecCommand runs a command inside a container and returns the combined output.
+func (c *Client) ExecCommand(ctx context.Context, containerID string, cmd []string) (string, error) {
+	execCfg := container.ExecOptions{
+		Cmd:          cmd,
+		AttachStdout: true,
+		AttachStderr: true,
+	}
+	execID, err := c.cli.ContainerExecCreate(ctx, containerID, execCfg)
+	if err != nil {
+		return "", fmt.Errorf("exec create: %w", err)
+	}
+
+	resp, err := c.cli.ContainerExecAttach(ctx, execID.ID, container.ExecAttachOptions{})
+	if err != nil {
+		return "", fmt.Errorf("exec attach: %w", err)
+	}
+	defer resp.Close()
+
+	var buf bytes.Buffer
+	_, err = io.Copy(&buf, resp.Reader)
+	if err != nil {
+		return "", fmt.Errorf("exec read: %w", err)
+	}
+
+	// Strip Docker multiplexed stream headers (8-byte prefix per frame)
+	raw := buf.Bytes()
+	var clean strings.Builder
+	for len(raw) >= 8 {
+		size := int(raw[4])<<24 | int(raw[5])<<16 | int(raw[6])<<8 | int(raw[7])
+		raw = raw[8:]
+		if size > len(raw) {
+			size = len(raw)
+		}
+		clean.Write(raw[:size])
+		raw = raw[size:]
+	}
+	if clean.Len() > 0 {
+		return clean.String(), nil
+	}
+	return buf.String(), nil
 }
 
 // RemoveContainer stops (if running) and removes a container.

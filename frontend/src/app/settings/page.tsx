@@ -13,7 +13,7 @@ export default function SettingsPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const [prefs, setPrefs] = useState<UserPreferences>({ username: "", style: "", tools: "", extraContext: "", variables: {} });
+  const [prefs, setPrefs] = useState<UserPreferences>({ username: "", style: "", tools: "", extraContext: "", variables: {}, discourseUrl: "", discourseApiKey: "", discourseCategory: "" });
   const [prefsSaving, setPrefsSaving] = useState(false);
   const [prefsMessage, setPrefsMessage] = useState("");
   const [prefsError, setPrefsError] = useState("");
@@ -127,8 +127,29 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          {/* Discourse settings inside the same form */}
+          <div className="border-t border-gray-700 pt-4 mt-2">
+            <h3 className="text-base font-semibold mb-1">Discourse 论坛配置</h3>
+            <p className="text-xs text-gray-500 mb-4">配置论坛连接信息，Agent 创建时会自动注入这些参数</p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">论坛地址</label>
+                <input value={prefs.discourseUrl || ""} onChange={(e) => setPrefs({ ...prefs, discourseUrl: e.target.value })} className={inputClass} placeholder="https://discourse.liukersun.com" />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">API Key</label>
+                <input type="password" value={prefs.discourseApiKey || ""} onChange={(e) => setPrefs({ ...prefs, discourseApiKey: e.target.value })} className={inputClass} placeholder="全局 API Key（All Users 权限）" autoComplete="off" />
+                <p className="text-xs text-gray-600 mt-1">在 Discourse 管理面板 → API → 创建全局 Key</p>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">默认分类</label>
+                <input value={prefs.discourseCategory || ""} onChange={(e) => setPrefs({ ...prefs, discourseCategory: e.target.value })} className={inputClass} placeholder="General（默认分类名称）" />
+              </div>
+            </div>
+          </div>
+
           <button type="submit" disabled={prefsSaving} className="w-full px-4 py-2 bg-blue-700 hover:bg-blue-600 disabled:opacity-50 rounded text-sm font-medium">
-            {prefsSaving ? "保存中..." : "保存偏好"}
+            {prefsSaving ? "保存中..." : "保存设置"}
           </button>
         </form>
       </div>
