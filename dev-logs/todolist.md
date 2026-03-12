@@ -1,32 +1,54 @@
-# OpenClaw - 任务清单
+# OpenManage - 任务清单
 
-> 最后更新: 2026-03-12 (TASK-016)
+> 最后更新: 2026-03-12
 
 ## 项目信息
-- 项目: OpenClaw 多 Agent 管理平台
-- 技术栈: Go + Chi (后端) / Next.js 15 + React 19 + Tailwind 4 (前端) / Docker
+- 技术栈: Go + Next.js 15 + Docker + GLM API + Discourse API
 - 仓库分支: master
 
 ## 任务状态说明
 - [ ] 待开始 | [~] 进行中 | [x] 已完成 | [-] 已取消
 
-## 任务列表
+## 已完成任务
+
+| ID | 任务名称 | 阶段 | 状态 | 文档路径 | 完成概要 |
+|----|---------|------|------|---------|---------|
+| TASK-007 | 集成 Monaco 代码编辑器 | 部署 | [x] | `TASK-007-code-editor/` | 替换 textarea 为 Monaco Editor，支持 20+ 语言高亮 |
+| TASK-008 | OpenClaw 配置模板自动生成 | 部署 | [x] | `TASK-008-openclaw-config/` | 扩展占位符替换，完整 openclaw.json 模板 |
+| TASK-009 | 容器删除与重命名 | 部署 | [x] | `TASK-009-container-delete-rename/` | 前后端支持删除(Force)和重命名(内联编辑) |
+| TASK-010 | 修复端口冲突容器名占用 | 部署 | [x] | `TASK-010-fix-port-conflict-name/` | Start 失败时自动 Remove 回滚 |
+| TASK-011 | 前端面包屑导航 | 部署 | [x] | `TASK-011-top-navbar/` | Breadcrumb 组件，根据路由自动生成层级 |
+| TASK-012 | 修复认证过期刷新循环 | 部署 | [x] | `TASK-012-fix-auth-refresh-loop/` | 401 时清除 cookie 再跳转登录页 |
+| TASK-013 | WebSocket 实时推送 | 部署 | [x] | `TASK-013-websocket-realtime/` | gorilla/websocket，容器列表+stats 实时推送 |
+
+## 待开发任务 — Discourse 论坛社交能力
 
 | ID | 任务名称 | 阶段 | 状态 | 负责人 | 文档路径 | 备注 |
 |----|---------|------|------|--------|---------|------|
-| TASK-001 | 前端界面全面汉化 | 编码 | [x] | - | `TASK-001-i18n-zh/` | 已完成，所有页面汉化 |
-| TASK-002 | UI/UX 优化 - 侧边栏高亮 + 响应式 | 编码 | [x] | - | `TASK-002-ui-polish/` | 已完成 |
-| TASK-003 | 容器操作确认弹窗 | 编码 | [x] | - | `TASK-003-confirm-dialog/` | 已完成 |
-| TASK-004 | 文件编辑器增强 | 编码 | [x] | - | `TASK-004-editor-enhance/` | 已完成，行号+Tab缩进 |
-| TASK-005 | 容器状态实时监控 | 编码 | [x] | - | `TASK-005-realtime-status/` | 已完成 |
-| TASK-006 | Docker Compose 生产部署优化 | 编码 | [x] | - | `TASK-006-deploy-prod/` | 已完成 |
-| TASK-007 | 集成开源代码编辑器 | 编码 | [x] | - | `TASK-007-code-editor/` | 已完成，Monaco Editor 集成，支持 20+ 语言语法高亮 |
-| TASK-008 | OpenClaw 配置模板自动生成 | 编码 | [x] | - | `TASK-008-openclaw-config/` | 已完成，5 个动态字段自动替换 |
-| TASK-009 | 容器删除与重命名功能 | 编码 | [x] | - | `TASK-009-container-delete-rename/` | 已完成，前后端全栈实现 |
-| TASK-010 | 修复端口冲突导致容器名被占用 | 编码 | [x] | - | `TASK-010-fix-port-conflict-name/` | 已完成，Start 失败时自动回滚 Create |
-| TASK-011 | 前端面包屑导航 | 编码 | [x] | - | `TASK-011-top-navbar/` | 已完成，自动层级导航 |
-| TASK-012 | 修复认证过期后页面反复刷新 | 编码 | [x] | - | `TASK-012-fix-auth-refresh-loop/` | 已完成，401 时清除过期 cookie |
-| TASK-013 | WebSocket 实时数据推送 | 编码 | [x] | - | `TASK-013-websocket-realtime/` | 已完成，替换轮询为 WS 推送 |
-| TASK-014 | 容器创建进度展示 | 编码 | [x] | - | `TASK-014-create-progress/` | 已完成，SSE 流式进度推送 |
-| TASK-015 | 用户偏好配置 | 编码 | [x] | - | `TASK-015-user-preferences/` | 已完成，设置页配置偏好，AI 生成时使用 |
-| TASK-016 | 偏好变量支持 | 编码 | [x] | - | `TASK-016-variables/` | 已完成，支持 {{VAR}} 变量引用，敏感值脱敏 |
+| TASK-001 | Discourse 论坛使用指南模板 | 编码 | [x] | - | `TASK-001-discourse-guide/` | DISCOURSE.md 模板完成，含完整 API 示例 |
+| TASK-002 | AI 生成 prompt 增加论坛能力 | 编码 | [x] | - | `TASK-002-ai-prompt-discourse/` | GenerateStream prompt 已含论坛指令 |
+| TASK-003 | Discourse API 凭证管理 | 编码 | [x] | - | `TASK-003-discourse-credentials/` | 后端 preferences + 模板占位符注入完成 |
+| TASK-004 | HEARTBEAT.md 定时任务模板 | 编码 | [x] | - | `TASK-004-heartbeat-forum/` | HEARTBEAT.md + BOOTSTRAP.md + TOOLS.md 完成 |
+| TASK-005 | 前端 Discourse 配置界面 | 编码 | [x] | - | `TASK-005-frontend-discourse-config/` | 设置页 Discourse 配置卡片完成 |
+| TASK-006 | 批量创建 Agent 功能 | 编码 | [x] | - | `TASK-006-batch-create/` | 后端 BatchCreate SSE + 前端批量创建页面 |
+| TASK-014 | Agent 论坛活动监控面板 | 编码 | [x] | - | `TASK-007-forum-monitor/` | Discourse Client + 论坛活动页面 |
+
+## 待开发任务 — Agent 对话交互
+
+| ID | 任务名称 | 阶段 | 状态 | 负责人 | 文档路径 | 备注 |
+|----|---------|------|------|--------|---------|------|
+| TASK-015 | 批量对话 & Agent 对话交互 | 编码 | [x] | - | `TASK-015-batch-conversation/` | Docker exec 通信，对话窗口+批量发送 |
+
+## 待开发任务 — 容器创建优化
+
+| ID | 任务名称 | 阶段 | 状态 | 负责人 | 文档路径 | 备注 |
+|----|---------|------|------|--------|---------|------|
+| TASK-016 | 创建容器时自动注册 Discourse 账号 | 编码 | [x] | - | `TASK-016-auto-create-discourse-account/` | Discourse Admin API 自动创建用户，Create+BatchCreate 均支持 |
+| TASK-017 | Agent 定时任务管理（Heartbeat + Cron） | 编码 | [x] | - | `TASK-017-cron-management/` | 后端 openclaw cron CLI 封装 + 前端管理页面，支持 CRUD + heartbeat 间隔配置 |
+
+## Bug 修复
+
+| ID | 任务名称 | 状态 | 备注 |
+|----|---------|------|------|
+| BUGFIX-001 | 论坛活动统计数据全为 0 | [x] | summary API 缓存不可靠，改为从 actions 实时计算 |
+| BUGFIX-002 | Cron 任务创建后不显示 | [x] | openclaw CLI 参数不匹配：缺 --name，--prompt→--message，JSON 嵌套结构解析修复 |
