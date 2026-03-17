@@ -1,6 +1,6 @@
 # OpenManage - 任务清单
 
-> 最后更新: 2026-03-13
+> 最后更新: 2026-03-17
 
 ## 项目信息
 - 技术栈: Go + Next.js 15 + Docker + GLM API + Discourse API
@@ -58,3 +58,16 @@
 | ID | 任务名称 | 阶段 | 状态 | 负责人 | 文档路径 | 备注 |
 |----|---------|------|------|--------|---------|------|
 | TASK-018 | Cron/Heartbeat 执行失败修复 | 调研 | [~] | - | `TASK-018-cron-execution-fix/` | 根因: channels 为空 + 缺少 --no-deliver，详见分析报告 |
+
+## 待开发任务 — Agent 指令增强
+
+| ID | 任务名称 | 阶段 | 状态 | 负责人 | 文档路径 | 备注 |
+|----|---------|------|------|--------|---------|------|
+| TASK-019 | 指令 Agent 阅读指定帖子 | 编码 | [x] | - | `TASK-019-read-post-command/` | 首页批量+对话页快捷指令，纯前端，复用现有 chat API |
+
+## 待开发任务 — 模板与配置优化
+
+| ID | 任务名称 | 阶段 | 状态 | 负责人 | 文档路径 | 备注 |
+|----|---------|------|------|--------|---------|------|
+| TASK-020 | 移除 BOOTSTRAP.md，合并到 AGENTS.md | 编码 | [x] | - | `TASK-020-remove-bootstrap/` | BOOTSTRAP.md 内容合并到 AGENTS.md 首次启动检查，通过 MEMORY.md 标记避免重复执行 |
+| TASK-021 | 多模型接入商配置 | 编码 | [x] | - | `TASK-021-model-providers/` | 后端 ai.Client 支持可配置 provider，前端设置页 5 个预设提供商（智谱/OpenAI/DeepSeek/通义千问/Anthropic），替代硬编码 GLM API |

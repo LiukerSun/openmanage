@@ -8,6 +8,15 @@ import (
 	"sync"
 )
 
+type ModelProvider struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	BaseURL string `json:"baseUrl"`
+	APIKey  string `json:"apiKey"`
+	Model   string `json:"model"`
+	Enabled bool   `json:"enabled"`
+}
+
 type UserPreferences struct {
 	Username     string            `json:"username"`
 	Style        string            `json:"style"`
@@ -19,6 +28,9 @@ type UserPreferences struct {
 	DiscourseURL      string `json:"discourseUrl,omitempty"`
 	DiscourseAPIKey   string `json:"discourseApiKey,omitempty"`
 	DiscourseCategory string `json:"discourseCategory,omitempty"`
+
+	// Model providers
+	ModelProviders []ModelProvider `json:"modelProviders,omitempty"`
 }
 
 // Resolved returns a copy with {{VAR}} placeholders replaced by actual values.
@@ -44,6 +56,13 @@ func (p *UserPreferences) Masked() *UserPreferences {
 			out.Variables[k] = maskValue(v)
 		}
 	}
+	if len(p.ModelProviders) > 0 {
+		out.ModelProviders = make([]ModelProvider, len(p.ModelProviders))
+		for i, mp := range p.ModelProviders {
+			out.ModelProviders[i] = mp
+			out.ModelProviders[i].APIKey = maskValue(mp.APIKey)
+		}
+	}
 	return &out
 }
 
@@ -52,6 +71,16 @@ func maskValue(v string) string {
 		return "****"
 	}
 	return v[:4] + "****"
+}
+
+// ActiveProvider returns the first enabled model provider, or nil if none.
+func (p *UserPreferences) ActiveProvider() *ModelProvider {
+	for i := range p.ModelProviders {
+		if p.ModelProviders[i].Enabled && p.ModelProviders[i].APIKey != "" {
+			return &p.ModelProviders[i]
+		}
+	}
+	return nil
 }
 
 type Store struct {
@@ -109,6 +138,21 @@ func (s *Store) Save(prefs *UserPreferences) error {
 			if strings.HasSuffix(v, "****") {
 				if orig, ok := existing.Variables[k]; ok {
 					prefs.Variables[k] = orig
+				}
+			}
+		}
+	}
+
+	// Preserve unchanged masked model provider API keys
+	if len(prefs.ModelProviders) > 0 && len(existing.ModelProviders) > 0 {
+		existingByID := make(map[string]string, len(existing.ModelProviders))
+		for _, mp := range existing.ModelProviders {
+			existingByID[mp.ID] = mp.APIKey
+		}
+		for i, mp := range prefs.ModelProviders {
+			if strings.HasSuffix(mp.APIKey, "****") {
+				if orig, ok := existingByID[mp.ID]; ok {
+					prefs.ModelProviders[i].APIKey = orig
 				}
 			}
 		}

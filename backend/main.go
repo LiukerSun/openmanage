@@ -47,16 +47,26 @@ func main() {
 	// AI client for generating agent configs
 	var aiClient *ai.Client
 	glmAPIKey := os.Getenv("GLM_API_KEY")
-	if glmAPIKey != "" {
-		aiClient = ai.NewClient(glmAPIKey)
-		log.Println("AI config generation enabled (GLM_API_KEY set)")
-	}
 
 	authH := handler.NewAuthHandler(jwtSecret)
 	prefsStore, err := preferences.NewStore(mountPrefix)
 	if err != nil {
 		log.Fatal("failed to create preferences store:", err)
 	}
+
+	// Try to init AI client from saved model provider preferences first
+	if p, err := prefsStore.Get(); err == nil {
+		if mp := p.ActiveProvider(); mp != nil {
+			aiClient = ai.NewClientWithProvider(mp.BaseURL, mp.APIKey, mp.Model)
+			log.Printf("AI config generation enabled (provider: %s, model: %s)", mp.Name, mp.Model)
+		}
+	}
+	// Fallback to GLM_API_KEY env var
+	if aiClient == nil && glmAPIKey != "" {
+		aiClient = ai.NewClient(glmAPIKey)
+		log.Println("AI config generation enabled (GLM_API_KEY env)")
+	}
+
 	containerH := &handler.ContainerHandler{Docker: dockerClient, TemplateDir: templateDir, MountPrefix: mountPrefix, AI: aiClient, GLMAPIKey: glmAPIKey, Prefs: prefsStore}
 
 	// Discourse client (lazy init from preferences)
@@ -108,6 +118,7 @@ func main() {
 		prefsH := &handler.PreferencesHandler{Store: prefsStore}
 		r.Get("/api/preferences", prefsH.Get)
 		r.Put("/api/preferences", prefsH.Save)
+		r.Post("/api/models/probe", prefsH.ProbeModels)
 
 		templateH := &handler.TemplateHandler{TemplateDir: templateDir}
 		r.Get("/api/templates", templateH.List)

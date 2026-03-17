@@ -69,6 +69,15 @@ export interface ContainerStats {
   pids: number;
 }
 
+export interface ModelProvider {
+  id: string;
+  name: string;
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  enabled: boolean;
+}
+
 export interface UserPreferences {
   username: string;
   style: string;
@@ -78,6 +87,7 @@ export interface UserPreferences {
   discourseUrl?: string;
   discourseApiKey?: string;
   discourseCategory?: string;
+  modelProviders?: ModelProvider[];
 }
 
 export interface BatchCreateRequest {
@@ -306,5 +316,12 @@ export const api = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ description }),
+    }),
+
+  probeModels: (baseUrl: string, apiKey: string) =>
+    fetchAPI<{ models: string[]; error?: string }>("/api/models/probe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ baseUrl, apiKey }),
     }),
 };

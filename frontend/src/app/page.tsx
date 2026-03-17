@@ -44,6 +44,10 @@ export default function Dashboard() {
   const [batchProgress, setBatchProgress] = useState<Record<string, BatchProgress>>({});
   const [batchSummary, setBatchSummary] = useState("");
 
+  // Read post shortcut
+  const [showReadPost, setShowReadPost] = useState(false);
+  const [topicInput, setTopicInput] = useState("");
+
   const requestAction = (id: string, name: string, act: "start" | "stop" | "restart" | "delete") => {
     if (act === "start") {
       doAction(id, act);
@@ -84,6 +88,17 @@ export default function Dashboard() {
     setBatchInput("");
     setBatchProgress({});
     setBatchSummary("");
+    setShowReadPost(false);
+    setTopicInput("");
+  };
+
+  const sendReadPost = () => {
+    const topic = topicInput.trim();
+    if (!topic) return;
+    const prompt = `请阅读这个论坛帖子并发表你的看法：${topic}\n\n要求：\n1. 先用工具读取帖子内容\n2. 理解帖子的主题和讨论内容\n3. 发表一条有见地的回复`;
+    setBatchInput(prompt);
+    setShowReadPost(false);
+    setTopicInput("");
   };
 
   const sendBatchChat = async () => {
@@ -232,7 +247,30 @@ export default function Dashboard() {
               <span className="text-sm text-gray-400">已选 {selected.size} 个 Agent</span>
               <button onClick={selectAllRunning} className="text-sm text-teal-400 hover:text-teal-300">全选运行中</button>
               <button onClick={() => setSelected(new Set())} className="text-sm text-gray-500 hover:text-gray-400">清空</button>
+              <span className="text-gray-700">|</span>
+              <button onClick={() => setShowReadPost(!showReadPost)} className="text-sm text-orange-400 hover:text-orange-300">
+                {showReadPost ? "取消" : "阅读帖子"}
+              </button>
             </div>
+            {showReadPost && (
+              <div className="flex gap-2 mb-3">
+                <input
+                  value={topicInput}
+                  onChange={(e) => setTopicInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && sendReadPost()}
+                  placeholder="输入帖子 URL 或 Topic ID..."
+                  className="flex-1 bg-gray-800 border border-orange-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-orange-500"
+                  autoFocus
+                />
+                <button
+                  onClick={sendReadPost}
+                  disabled={!topicInput.trim()}
+                  className="px-4 py-2 bg-orange-700 hover:bg-orange-600 disabled:bg-gray-700 disabled:text-gray-500 rounded text-sm whitespace-nowrap"
+                >
+                  生成指令
+                </button>
+              </div>
+            )}
             <div className="flex gap-2">
               <input
                 value={batchInput}

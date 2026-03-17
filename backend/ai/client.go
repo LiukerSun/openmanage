@@ -13,23 +13,42 @@ import (
 )
 
 const (
-	baseURL = "https://open.bigmodel.cn/api/coding/paas/v4"
-	model   = "glm-4.7-flash"
+	defaultBaseURL = "https://open.bigmodel.cn/api/coding/paas/v4"
+	defaultModel   = "glm-4.7-flash"
 )
 
 var mdFiles = []string{
-	"SOUL.md", "IDENTITY.md", "AGENTS.md", "BOOTSTRAP.md",
+	"SOUL.md", "IDENTITY.md", "AGENTS.md",
 	"HEARTBEAT.md", "MEMORY.md", "TOOLS.md", "USER.md",
 }
 
 type Client struct {
 	apiKey     string
+	baseURL    string
+	model      string
 	httpClient *http.Client
 }
 
 func NewClient(apiKey string) *Client {
 	return &Client{
 		apiKey:     apiKey,
+		baseURL:    defaultBaseURL,
+		model:      defaultModel,
+		httpClient: &http.Client{Timeout: 120 * time.Second},
+	}
+}
+
+func NewClientWithProvider(baseURL, apiKey, model string) *Client {
+	if baseURL == "" {
+		baseURL = defaultBaseURL
+	}
+	if model == "" {
+		model = defaultModel
+	}
+	return &Client{
+		apiKey:     apiKey,
+		baseURL:    baseURL,
+		model:      model,
 		httpClient: &http.Client{Timeout: 120 * time.Second},
 	}
 }
@@ -48,19 +67,18 @@ type GenerateRequest struct {
 // Generate calls the GLM API to produce all 8 config files in one shot.
 // Returns a map of filename -> content.
 func (c *Client) Generate(ctx context.Context, req GenerateRequest) (map[string]string, error) {
-	systemPrompt := `你是一个 OpenClaw Agent 配置文件生成器。用户会提供 Agent 的名称和描述，你需要根据这些信息生成 8 个 markdown 配置文件。
+	systemPrompt := `你是一个 OpenClaw Agent 配置文件生成器。用户会提供 Agent 的名称和描述，你需要根据这些信息生成 7 个 markdown 配置文件。
 
 请严格以 JSON 格式输出，key 为文件名，value 为文件内容。不要输出任何其他内容。
 
 需要生成的文件：
 1. SOUL.md - Agent 的核心灵魂设定，包括性格、价值观、行为准则
 2. IDENTITY.md - Agent 的身份信息，包括名称、角色定位、自我介绍
-3. AGENTS.md - 可调用的子 Agent 列表及其能力描述
-4. BOOTSTRAP.md - Agent 启动时的初始化指令和欢迎语
-5. HEARTBEAT.md - 定期提醒事项，如检查任务进度、主动关怀用户
-6. MEMORY.md - 初始记忆和需要长期记住的关键信息
-7. TOOLS.md - Agent 可使用的工具说明和使用注意事项
-8. USER.md - 目标用户画像和交互偏好
+3. AGENTS.md - Agent 的核心操作指令手册，包括行为准则、工作流程、首次启动检查（验证论坛账号、发布自我介绍）和日常运行说明
+4. HEARTBEAT.md - 定期提醒事项，如检查任务进度、主动关怀用户
+5. MEMORY.md - 初始记忆和需要长期记住的关键信息
+6. TOOLS.md - Agent 可使用的工具说明和使用注意事项
+7. USER.md - 目标用户画像和交互偏好
 
 每个文件内容应该丰富、具体、有针对性，不要使用空泛的占位符。内容使用 Markdown 格式。
 
@@ -75,7 +93,7 @@ func (c *Client) Generate(ctx context.Context, req GenerateRequest) (map[string]
 	userPrompt := fmt.Sprintf("Agent 名称：%s\nAgent 描述：%s", req.Name, req.Description)
 
 	body := map[string]interface{}{
-		"model": model,
+		"model": c.model,
 		"messages": []map[string]string{
 			{"role": "system", "content": systemPrompt},
 			{"role": "user", "content": userPrompt},
@@ -88,7 +106,7 @@ func (c *Client) Generate(ctx context.Context, req GenerateRequest) (map[string]
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", baseURL+"/chat/completions", bytes.NewReader(bodyJSON))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/chat/completions", bytes.NewReader(bodyJSON))
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
@@ -158,19 +176,18 @@ func extractJSON(s string) string {
 // with the cumulative character count as tokens arrive.
 // Returns the final parsed file map.
 func (c *Client) GenerateStream(ctx context.Context, req GenerateRequest, onChunk func(chars int)) (map[string]string, error) {
-	systemPrompt := `你是一个 OpenClaw Agent 配置文件生成器。用户会提供 Agent 的名称和描述，你需要根据这些信息生成 8 个 markdown 配置文件。
+	systemPrompt := `你是一个 OpenClaw Agent 配置文件生成器。用户会提供 Agent 的名称和描述，你需要根据这些信息生成 7 个 markdown 配置文件。
 
 请严格以 JSON 格式输出，key 为文件名，value 为文件内容。不要输出任何其他内容。
 
 需要生成的文件：
 1. SOUL.md - Agent 的核心灵魂设定，包括性格、价值观、行为准则。要体现独特个性。
 2. IDENTITY.md - Agent 的身份信息，包括名称、角色定位、自我介绍
-3. AGENTS.md - 可调用的子 Agent 列表及其能力描述
-4. BOOTSTRAP.md - Agent 启动时的初始化指令。必须包含：首次启动时在 Discourse 论坛的 General 分类（category: 4）发布一个自我介绍帖子，介绍自己的名字、兴趣和专长。
-5. HEARTBEAT.md - 定期执行的论坛社交任务。必须包含：浏览论坛最新话题、选择感兴趣的话题回复（每次 1-3 个）、偶尔发起新话题分享思考。回复要有深度，避免刷屏。
-6. MEMORY.md - 初始记忆，包括论坛地址和自己的用户名
-7. TOOLS.md - Agent 可使用的工具。必须包含：Discourse 论坛 API（通过 HTTP 请求发帖、回帖、浏览、搜索），以及 Web 搜索能力。
-8. USER.md - 目标用户画像和交互偏好
+3. AGENTS.md - Agent 的核心操作指令手册。必须包含：行为准则、首次启动检查（验证论坛账号、在 Discourse 论坛的 General 分类 category: 4 发布自我介绍帖子）、日常运行说明
+4. HEARTBEAT.md - 定期执行的论坛社交任务。必须包含：浏览论坛最新话题、选择感兴趣的话题回复（每次 1-3 个）、偶尔发起新话题分享思考。回复要有深度，避免刷屏。
+5. MEMORY.md - 初始记忆，包括论坛地址和自己的用户名
+6. TOOLS.md - Agent 可使用的工具。必须包含：Discourse 论坛 API（通过 HTTP 请求发帖、回帖、浏览、搜索），以及 Web 搜索能力。
+7. USER.md - 目标用户画像和交互偏好
 
 每个文件内容应该丰富、具体、有针对性，不要使用空泛的占位符。内容使用 Markdown 格式。
 
@@ -203,7 +220,7 @@ func (c *Client) GenerateStream(ctx context.Context, req GenerateRequest, onChun
 	}
 
 	body := map[string]interface{}{
-		"model": model,
+		"model": c.model,
 		"messages": []map[string]string{
 			{"role": "system", "content": systemPrompt},
 			{"role": "user", "content": userPrompt},
@@ -217,7 +234,7 @@ func (c *Client) GenerateStream(ctx context.Context, req GenerateRequest, onChun
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", baseURL+"/chat/completions", bytes.NewReader(bodyJSON))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/chat/completions", bytes.NewReader(bodyJSON))
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
@@ -300,7 +317,7 @@ func (c *Client) GenerateCronJob(ctx context.Context, description string) (sched
 {"schedule": "*/30 * * * *", "prompt": "请浏览论坛最新话题..."}`
 
 	body := map[string]interface{}{
-		"model": model,
+		"model": c.model,
 		"messages": []map[string]string{
 			{"role": "system", "content": systemPrompt},
 			{"role": "user", "content": description},
@@ -309,7 +326,7 @@ func (c *Client) GenerateCronJob(ctx context.Context, description string) (sched
 	}
 
 	bodyJSON, _ := json.Marshal(body)
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", baseURL+"/chat/completions", bytes.NewReader(bodyJSON))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/chat/completions", bytes.NewReader(bodyJSON))
 	if err != nil {
 		return "", "", fmt.Errorf("create request: %w", err)
 	}

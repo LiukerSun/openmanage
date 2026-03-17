@@ -18,6 +18,10 @@ export default function ConversationsPage() {
   const [lastResponseId, setLastResponseId] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Read post shortcut
+  const [showReadPost, setShowReadPost] = useState(false);
+  const [topicInput, setTopicInput] = useState("");
+
   const refreshList = useCallback(() => {
     api.listConversations(id).then(setList).catch((e) => setError(e.message));
   }, [id]);
@@ -159,6 +163,15 @@ export default function ConversationsPage() {
     }
   };
 
+  const sendReadPost = () => {
+    const topic = topicInput.trim();
+    if (!topic) return;
+    const prompt = `请阅读这个论坛帖子并发表你的看法：${topic}\n\n要求：\n1. 先用工具读取帖子内容\n2. 理解帖子的主题和讨论内容\n3. 发表一条有见地的回复`;
+    setInput(prompt);
+    setShowReadPost(false);
+    setTopicInput("");
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -229,23 +242,53 @@ export default function ConversationsPage() {
           </div>
 
           {/* Input area */}
-          <div className="border-t border-gray-800 p-3 flex gap-2">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="输入消息，Enter 发送，Shift+Enter 换行"
-              rows={1}
-              className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm resize-none focus:outline-none focus:border-blue-600"
-              disabled={sending}
-            />
-            <button
-              onClick={sendMessage}
-              disabled={sending || !input.trim()}
-              className="px-4 py-2 bg-blue-700 hover:bg-blue-600 disabled:bg-gray-700 disabled:text-gray-500 rounded text-sm whitespace-nowrap"
-            >
-              {sending ? "发送中..." : "发送"}
-            </button>
+          <div className="border-t border-gray-800 p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs text-gray-600">快捷指令:</span>
+              <button
+                onClick={() => setShowReadPost(!showReadPost)}
+                className="px-2 py-0.5 text-xs bg-orange-900 hover:bg-orange-800 text-orange-300 rounded"
+              >
+                {showReadPost ? "取消" : "阅读帖子"}
+              </button>
+            </div>
+            {showReadPost && (
+              <div className="flex gap-2 mb-2">
+                <input
+                  value={topicInput}
+                  onChange={(e) => setTopicInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && sendReadPost()}
+                  placeholder="输入帖子 URL 或 Topic ID..."
+                  className="flex-1 bg-gray-800 border border-orange-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-orange-500"
+                  autoFocus
+                />
+                <button
+                  onClick={sendReadPost}
+                  disabled={!topicInput.trim()}
+                  className="px-3 py-1.5 bg-orange-700 hover:bg-orange-600 disabled:bg-gray-700 disabled:text-gray-500 rounded text-sm"
+                >
+                  生成
+                </button>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="输入消息，Enter 发送，Shift+Enter 换行"
+                rows={1}
+                className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm resize-none focus:outline-none focus:border-blue-600"
+                disabled={sending}
+              />
+              <button
+                onClick={sendMessage}
+                disabled={sending || !input.trim()}
+                className="px-4 py-2 bg-blue-700 hover:bg-blue-600 disabled:bg-gray-700 disabled:text-gray-500 rounded text-sm whitespace-nowrap"
+              >
+                {sending ? "发送中..." : "发送"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
