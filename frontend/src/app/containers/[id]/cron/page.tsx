@@ -85,10 +85,20 @@ export default function CronPage() {
     } catch (e: any) { setError(e.message); }
   };
 
+  const [runningJob, setRunningJob] = useState<string | null>(null);
+
   const handleRun = async (jobId: string) => {
+    setRunningJob(jobId);
     try {
       await api.runCronJob(id, jobId);
-    } catch (e: any) { setError(e.message); }
+      // openclaw cron run is async — wait a bit then refresh to show updated lastRun
+      setTimeout(() => {
+        fetchData().finally(() => setRunningJob(null));
+      }, 3000);
+    } catch (e: any) {
+      setError(e.message);
+      setRunningJob(null);
+    }
   };
 
   const handleRemove = async (jobId: string) => {
@@ -221,8 +231,8 @@ export default function CronPage() {
                     >
                       {job.enabled ? "禁用" : "启用"}
                     </button>
-                    <button onClick={() => handleRun(job.id)} className="px-2 py-1 bg-blue-800 hover:bg-blue-700 rounded text-xs">
-                      立即执行
+                    <button onClick={() => handleRun(job.id)} disabled={runningJob === job.id} className="px-2 py-1 bg-blue-800 hover:bg-blue-700 disabled:opacity-50 rounded text-xs">
+                      {runningJob === job.id ? "执行中..." : "立即执行"}
                     </button>
                     <button onClick={() => handleRemove(job.id)} className="px-2 py-1 bg-red-900 hover:bg-red-800 rounded text-xs">
                       删除

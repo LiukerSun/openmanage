@@ -1,6 +1,6 @@
 # OpenManage - 任务清单
 
-> 最后更新: 2026-03-12
+> 最后更新: 2026-03-13
 
 ## 项目信息
 - 技术栈: Go + Next.js 15 + Docker + GLM API + Discourse API
@@ -52,3 +52,9 @@
 |----|---------|------|------|
 | BUGFIX-001 | 论坛活动统计数据全为 0 | [x] | summary API 缓存不可靠，改为从 actions 实时计算 |
 | BUGFIX-002 | Cron 任务创建后不显示 | [x] | openclaw CLI 参数不匹配：缺 --name，--prompt→--message，JSON 嵌套结构解析修复 |
+
+## 待开发任务 — 定时任务修复
+
+| ID | 任务名称 | 阶段 | 状态 | 负责人 | 文档路径 | 备注 |
+|----|---------|------|------|--------|---------|------|
+| TASK-018 | Cron/Heartbeat 执行失败修复 | 调研 | [~] | - | `TASK-018-cron-execution-fix/` | 根因: channels 为空 + 缺少 --no-deliver，详见分析报告 |

@@ -97,10 +97,25 @@ func (c *Client) GetConfig(ctx context.Context, containerID string) (*ContainerC
 	}, nil
 }
 
+// MessageResult holds the reply text and the response ID for conversation continuity.
+type MessageResult struct {
+	Reply      string
+	ResponseID string
+}
+
 // SendMessage sends a message to the agent running in the container via docker exec curl.
-// It returns the agent's reply text.
-func (c *Client) SendMessage(ctx context.Context, containerID string, cfg *ContainerConfig, message string) (string, error) {
-	payload := fmt.Sprintf(`{"model":"openclaw","input":%s}`, jsonString(message))
+// If previousResponseID is non-empty, the request includes it so OpenClaw continues
+// the existing conversation instead of creating a new session.
+func (c *Client) SendMessage(ctx context.Context, containerID string, cfg *ContainerConfig, message, previousResponseID string) (*MessageResult, error) {
+	payloadMap := map[string]interface{}{
+		"model": "openclaw",
+		"input": message,
+	}
+	if previousResponseID != "" {
+		payloadMap["previous_response_id"] = previousResponseID
+	}
+	payloadBytes, _ := json.Marshal(payloadMap)
+	payload := string(payloadBytes)
 
 	cmd := []string{
 		"curl", "-sS", "--max-time", "120",
@@ -113,21 +128,20 @@ func (c *Client) SendMessage(ctx context.Context, containerID string, cfg *Conta
 
 	output, err := c.Docker.ExecCommand(ctx, containerID, cmd)
 	if err != nil {
-		return "", fmt.Errorf("exec curl: %w", err)
+		return nil, fmt.Errorf("exec curl: %w", err)
 	}
 
-	// Parse the OpenResponses API response to extract the output text
-	reply := extractReply(output)
-	return reply, nil
+	// Parse the OpenResponses API response to extract the output text and response ID
+	reply, respID := extractReply(output)
+	return &MessageResult{Reply: reply, ResponseID: respID}, nil
 }
 
-// extractReply parses the /v1/responses JSON and extracts the output_text or
-// the first output message content.
-func extractReply(raw string) string {
+// extractReply parses the /v1/responses JSON and extracts the output_text and response ID.
+func extractReply(raw string) (string, string) {
 	raw = strings.TrimSpace(raw)
 
-	// Try to extract output_text field first
 	var resp struct {
+		ID         string `json:"id"`
 		OutputText string `json:"output_text"`
 		Output     []struct {
 			Type    string `json:"type"`
@@ -142,16 +156,15 @@ func extractReply(raw string) string {
 	}
 
 	if err := json.Unmarshal([]byte(raw), &resp); err != nil {
-		// Not valid JSON — return raw output
-		return raw
+		return raw, ""
 	}
 
 	if resp.Error != nil {
-		return fmt.Sprintf("[Error] %s", resp.Error.Message)
+		return fmt.Sprintf("[Error] %s", resp.Error.Message), ""
 	}
 
 	if resp.OutputText != "" {
-		return resp.OutputText
+		return resp.OutputText, resp.ID
 	}
 
 	// Fallback: iterate output items
@@ -159,18 +172,13 @@ func extractReply(raw string) string {
 		if item.Type == "message" {
 			for _, c := range item.Content {
 				if c.Type == "output_text" && c.Text != "" {
-					return c.Text
+					return c.Text, resp.ID
 				}
 			}
 		}
 	}
 
-	return raw
-}
-
-func jsonString(s string) string {
-	b, _ := json.Marshal(s)
-	return string(b)
+	return raw, resp.ID
 }
 
 // CronJob is the flattened representation we return to the frontend.
@@ -288,14 +296,34 @@ func (c *Client) ToggleCronJob(ctx context.Context, containerID, jobID string, e
 	return nil
 }
 
+// CronRunResult is the response from `openclaw cron run`.
+type CronRunResult struct {
+	OK     bool   `json:"ok"`
+	Ran    bool   `json:"ran"`
+	Reason string `json:"reason,omitempty"`
+}
+
 // RunCronJob triggers immediate execution of a cron job.
-func (c *Client) RunCronJob(ctx context.Context, containerID, jobID string) error {
+// Returns a CronRunResult so the caller can inspect whether it actually ran.
+func (c *Client) RunCronJob(ctx context.Context, containerID, jobID string) (*CronRunResult, error) {
 	cmd := []string{"openclaw", "cron", "run", jobID}
-	_, err := c.Docker.ExecCommand(ctx, containerID, cmd)
-	if err != nil {
-		return fmt.Errorf("exec openclaw cron run: %w", err)
+	output, err := c.Docker.ExecCommand(ctx, containerID, cmd)
+
+	// openclaw cron run exits 1 even on "already-running", so try parsing JSON first
+	output = strings.TrimSpace(output)
+	var result CronRunResult
+	if json.Unmarshal([]byte(output), &result) == nil {
+		if !result.Ran {
+			return &result, fmt.Errorf("任务未执行: %s", result.Reason)
+		}
+		return &result, nil
 	}
-	return nil
+
+	// JSON parse failed — fall back to raw error
+	if err != nil {
+		return nil, fmt.Errorf("exec openclaw cron run: %w", err)
+	}
+	return &CronRunResult{OK: true, Ran: true}, nil
 }
 
 // RemoveCronJob deletes a cron job.

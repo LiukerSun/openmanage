@@ -87,7 +87,8 @@ func (h *CronHandler) Run(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	jobID := chi.URLParam(r, "jobId")
 
-	if err := h.OpenClaw.RunCronJob(r.Context(), id, jobID); err != nil {
+	_, err := h.OpenClaw.RunCronJob(r.Context(), id, jobID)
+	if err != nil {
 		writeError(w, http.StatusBadGateway, "执行 cron 失败: "+err.Error())
 		return
 	}

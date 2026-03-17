@@ -106,7 +106,13 @@ type ForumAction struct {
 }
 
 type ChatRequest struct {
-	Message string `json:"message"`
+	Message            string `json:"message"`
+	PreviousResponseID string `json:"previousResponseId,omitempty"`
+}
+
+type ChatResponse struct {
+	Reply      string `json:"reply"`
+	ResponseID string `json:"responseId,omitempty"`
 }
 
 type BatchChatRequest struct {

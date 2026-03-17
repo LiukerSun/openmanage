@@ -73,13 +73,13 @@ func (h *ChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 		sendSSE(map[string]string{"status": "sending", "message": "Agent 已重启，正在发送消息..."})
 	}
 
-	reply, err := h.OpenClaw.SendMessage(r.Context(), id, cfg, req.Message)
+	reply, err := h.OpenClaw.SendMessage(r.Context(), id, cfg, req.Message, req.PreviousResponseID)
 	if err != nil {
 		sendSSE(map[string]string{"status": "error", "message": fmt.Sprintf("发送失败: %v", err)})
 		return
 	}
 
-	sendSSE(map[string]string{"status": "done", "reply": reply})
+	sendSSE(map[string]interface{}{"status": "done", "reply": reply.Reply, "responseId": reply.ResponseID})
 }
 
 // BatchChat handles POST /api/batch/chat
@@ -183,7 +183,7 @@ func (h *ChatHandler) BatchChat(w http.ResponseWriter, r *http.Request) {
 				time.Sleep(5 * time.Second)
 			}
 
-			reply, err := h.OpenClaw.SendMessage(r.Context(), containerID, cfg, req.Message)
+			reply, err := h.OpenClaw.SendMessage(r.Context(), containerID, cfg, req.Message, "")
 			if err != nil {
 				log.Printf("batch chat: send to %s: %v", containerID, err)
 				sendSSE(map[string]interface{}{
@@ -204,7 +204,7 @@ func (h *ChatHandler) BatchChat(w http.ResponseWriter, r *http.Request) {
 				"index":   index,
 				"step":    "done",
 				"status":  "done",
-				"message": truncate(reply, 100),
+				"message": truncate(reply.Reply, 100),
 			})
 			countMu.Lock()
 			successCount++

@@ -15,6 +15,7 @@ export default function ConversationsPage() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
+  const [lastResponseId, setLastResponseId] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const refreshList = useCallback(() => {
@@ -55,6 +56,7 @@ export default function ConversationsPage() {
   }, [detail?.messages]);
 
   const openConversation = (sid: string) => {
+    setLastResponseId("");
     api.getConversation(id, sid).then(setDetail).catch((e) => setError(e.message));
   };
 
@@ -62,6 +64,7 @@ export default function ConversationsPage() {
     setDetail(null);
     setInput("");
     setStatusMsg("");
+    setLastResponseId("");
   };
 
   const sendMessage = async () => {
@@ -90,7 +93,7 @@ export default function ConversationsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ message: msg }),
+        body: JSON.stringify({ message: msg, previousResponseId: lastResponseId || undefined }),
       });
 
       if (!res.ok) {
@@ -119,6 +122,9 @@ export default function ConversationsPage() {
             if (evt.status === "sending") {
               setStatusMsg("Agent 正在思考...");
             } else if (evt.status === "done" && evt.reply) {
+              if (evt.responseId) {
+                setLastResponseId(evt.responseId);
+              }
               const assistantMsg: Message = { role: "assistant", content: evt.reply };
               setDetail((prev) => {
                 if (!prev) return prev;

@@ -21,6 +21,9 @@ frontend/out/
 *.swo
 *~
 
+# Templates (OpenClaw config templates with sensitive placeholders)
+backend/templates/
+
 # OS
 .DS_Store
 Thumbs.db

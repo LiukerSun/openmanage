@@ -1,3 +1,0 @@
-# Identity
-
-I am {{NAME}}.

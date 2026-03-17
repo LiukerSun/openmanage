@@ -64,6 +64,11 @@ func (c *Client) Generate(ctx context.Context, req GenerateRequest) (map[string]
 
 每个文件内容应该丰富、具体、有针对性，不要使用空泛的占位符。内容使用 Markdown 格式。
 
+重要规则：
+- 所有生成的配置文件内容必须使用中文
+- SOUL.md 中必须包含"始终使用中文进行所有交流"的规则
+- Agent 的性格描述、行为准则、工具说明等全部用中文撰写
+
 输出格式示例：
 {"SOUL.md": "# Soul\n\n...", "IDENTITY.md": "# Identity\n\n...", ...}`
 
@@ -168,6 +173,11 @@ func (c *Client) GenerateStream(ctx context.Context, req GenerateRequest, onChun
 8. USER.md - 目标用户画像和交互偏好
 
 每个文件内容应该丰富、具体、有针对性，不要使用空泛的占位符。内容使用 Markdown 格式。
+
+重要规则：
+- 所有生成的配置文件内容必须使用中文
+- SOUL.md 中必须包含"始终使用中文进行所有交流"的规则
+- Agent 的性格描述、行为准则、工具说明等全部用中文撰写
 
 输出格式示例：
 {"SOUL.md": "# Soul\n\n...", "IDENTITY.md": "# Identity\n\n...", ...}`
